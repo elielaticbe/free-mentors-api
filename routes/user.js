@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 // let bcrypt = require ('bcrypt');
 const dotenv = require('dotenv');
 const usersModel = require('../models/users');
+// eslint-disable-next-line import/order
+const Joi = require('joi');
 
 dotenv.config();
 const router = express.Router();
@@ -56,11 +58,40 @@ router.post('/auth/signup', (req, res) => {
   }
 
   // const password = bcrypt.hashSync(req.body.password, 10);
+  // const regEx = '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$';
+
+  const validateUser = (newUser) => {
+    const schema = {
+      firstname: Joi.string().regex(/^\S+$/).min(3).max(20)
+        .required(),
+      lastName: Joi.string().regex(/^\S+$/).min(3).max(20)
+        .required(),
+      email: Joi.string().email({ minDomainAtoms: 2 }).trim().required(),
+      password: Joi.string().regex(/^\S+$/).min(3).max(255)
+        .required(),
+      address: Joi.string().min(3).max(255).required(),
+      bio: Joi.string().min(3).max(255).required(),
+      occupation: Joi.string().required(),
+      expertise: Joi.string().required(),
+    };
+
+    return Joi.validate(newUser, schema);
+  };
+
+  const { error } = validateUser(req.body);
+  if (error) {
+    res.status(400).json({
+      status: 422,
+      message: 'Make sure your email address and passwords are correctly typed ',
+    });
+  }
   const newUser = {
+
     userId: users.length + 1,
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     email: req.body.email,
+    // eslint-disable-next-line no-useless-escape
     password: req.body.password,
     address: req.body.address,
     bio: req.body.bio,
@@ -68,6 +99,30 @@ router.post('/auth/signup', (req, res) => {
     expertise: req.body.expertise,
     isAdmin: false,
   };
+
+
+  /* const loginFields = (userFinder) => {
+    const schema = {
+      email: Joi.string().regex(/^\S+$/).email().required(),
+      password: Joi.string().regex(/^\S+$/).min(3).max(255)
+        .required(),
+
+    };
+
+    const options = {
+      language: {
+        key: '{{key}} ',
+        string: {
+          regex: {
+            base: 'must not have empty spaces',
+          },
+        },
+      },
+    };
+
+    return Joi.validate(userFinder, schema, options);
+  };
+  */
 
   users.push(newUser);
   // res.send(newUser);
@@ -89,15 +144,6 @@ router.post('/auth/signup', (req, res) => {
     data: {
       token,
       message: 'User created succefully',
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      email: newUser.email,
-      address: newUser.address,
-      bio: newUser.bio,
-      occupation: newUser.occupation,
-      expertise: newUser.expertise,
-      isAdmin: false,
-
     },
   });
 });
